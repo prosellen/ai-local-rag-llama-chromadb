@@ -1,43 +1,60 @@
 version: "3.8"
 
 services:
-  frontend:
+  openwebui:
     image: ghcr.io/open-webui/open-webui:main
+    volumes:
+      - /var/containers/openwebui=/app/backend/data
     environment:
-      ENV: dev
-    networks:
-      - local-rag-coop-frontend
-
-  backend:
-    build: ./src/backend/
-    image: prosellen/rag-coop-backend
+      - ENV=dev
+      - ENABLE_SIGNUP=True
+      - ENABLE_COMMUNITY_SHARING=False
+      - WEBUI_SESSION_COOKIE_SAME_SITE=strict
+      - WEBUI_SESSION_COOKIE_SECURE=True
+      - ENABLE_OLLAMA_API=True
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     ports:
-      - "3001:3001"
-    # args:
-    #   - BUILD_ENV=${BUILD_ENV:-development}
-    #   - CERT_FILE=${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
-    environment:
-      BUILD_ENV: ${BUILD_ENV:-development}
-      CERT_FILE: ${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
-    # command: ["python", "main.py"]
-    develop:
-      watch:
-        - action: sync # Sync file changes without rebuilding
-          path: . # Watch all files in the project directory
-          target: /app # Sync changes into the container
-
-  ollama:
-    image: ollama/ollama
-    depends_on:
-      - chromadb
+      - "3000:8080"
     networks:
       - local-rag-coop-frontend
-      - local-rag-coop-backend
 
-  chromadb:
-    image: chromadb/chroma
-    networks:
-      - local-rag-coop-backend
+  # # Custom Python Backend
+  # backend:
+  #   build: ./src/backend/
+  #   image: prosellen/rag-coop-backend
+  #   ports:
+  #     - "3001:3001"
+  #   # args:
+  #   #   - BUILD_ENV=${BUILD_ENV:-development}
+  #   #   - CERT_FILE=${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
+  #   environment:
+  #     BUILD_ENV: ${BUILD_ENV:-development}
+  #     CERT_FILE: ${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
+  #   # command: ["python", "main.py"]
+  #   develop:
+  #     watch:
+  #       - action: sync # Sync file changes without rebuilding
+  #         path: . # Watch all files in the project directory
+  #         target: /app # Sync changes into the container
+  #   networks:
+  #     - local-rag-coop-frontend
+  #     - local-rag-coop-backend
+
+  # # Ollama API
+  # ollama:
+  #   image: ollama/ollama
+  #   depends_on:
+  #     - chromadb
+  #   networks:
+  #     - local-rag-coop-frontend
+  #     - local-rag-coop-backend
+
+  # # ChromaDB database
+  # chromadb:
+  #   image: chromadb/chroma
+  #   networks:
+  #     - local-rag-coop-backend
 
 networks:
   local-rag-coop-frontend:
