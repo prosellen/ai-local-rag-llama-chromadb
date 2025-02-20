@@ -1,23 +1,36 @@
-version: "3.8"
-
 services:
+  # Open-WebUI Frontend
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: unless-stopped
     volumes:
-      - /var/containers/openwebui=/app/backend/data
+      - openwebui_data:/app/backend/data
     environment:
-      - ENV=dev
-      - ENABLE_SIGNUP=True
-      - ENABLE_COMMUNITY_SHARING=False
-      - WEBUI_SESSION_COOKIE_SAME_SITE=strict
-      - WEBUI_SESSION_COOKIE_SECURE=True
-      - ENABLE_OLLAMA_API=True
+      # - ENV=dev
+      # - ENABLE_SIGNUP=True
+      # - ENABLE_COMMUNITY_SHARING=False
+      # - WEBUI_SESSION_COOKIE_SAME_SITE=strict
+      # - WEBUI_SESSION_COOKIE_SECURE=True
+      # - ENABLE_OLLAMA_API=True
       - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://ollama:11434
     ports:
       - "3000:8080"
+    depends_on:
+      - ollama
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - local-rag-coop-frontend
+    # Uncomment if you have access to a GPU (unavailable on MacOS as of time of writing)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
 
   # # Custom Python Backend
   # backend:
@@ -41,20 +54,47 @@ services:
   #     - local-rag-coop-frontend
   #     - local-rag-coop-backend
 
-  # # Ollama API
-  # ollama:
-  #   image: ollama/ollama
-  #   depends_on:
-  #     - chromadb
-  #   networks:
-  #     - local-rag-coop-frontend
-  #     - local-rag-coop-backend
+  # Ollama API
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - local-rag-coop-frontend
+      # - local-rag-coop-backend
+    healthcheck:
+      test: ollama --version || exit 1
+    command: serve
+    # depends_on:
+    #   - chromadb
+    # - local-rag-coop-backend
 
   # # ChromaDB database
   # chromadb:
   #   image: chromadb/chroma
   #   networks:
   #     - local-rag-coop-backend
+
+  # Pull-Image - automatically downloads the latest model
+  ollama-models-pull:
+    container_name: ollama-models-pull
+    image: curlimages/curl:latest
+    command: >
+      http://ollama:11434/api/pull -d '{"name":"mistral"}'
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - local-rag-coop-frontend
+
+volumes:
+  ollama_data:
+  openwebui_data:
 
 networks:
   local-rag-coop-frontend:
