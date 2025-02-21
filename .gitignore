@@ -1,0 +1,35 @@
+# VS Code
+!.vscode/extensions.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyo
+*.pyd
+*.pdb
+
+# Docker
+*.log
+*.tmp
+*.pid
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+*.sublime-project
+*.sublime-workspace
+docker-compose.override.yml
+.env
+
+# Docker
+docker.env
+
+# Resources for the "R" part of "RAG"
+# This is where I will put all my files ... and hope for the best. :3
+src/backend/resources
