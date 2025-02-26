@@ -1,4 +1,11 @@
+# MacOS
+.DS_Store
+
+# IDEA
+.idea
+
 # VS Code
+.vscode
 !.vscode/extensions.json
 
 # Python

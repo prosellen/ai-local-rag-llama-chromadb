@@ -17,10 +17,14 @@ ENV REQUESTS_CA_BUNDLE=${CERT_PATH}
 RUN cp /tmp/Zscaler_Root_CA.pem $CERT_DIR
 RUN update-ca-certificates
 
+RUN useradd -ms /bin/sh -u 1001 app
+USER app
+
+
 WORKDIR /app
 
 # Copy application code
-COPY . .
+COPY --chown=app:app . .
 
 # Install dependencies
 RUN pip install --upgrade pip

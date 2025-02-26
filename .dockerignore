@@ -5,42 +5,33 @@ _.pyo
 **pycache**/
 
 # Ignore virtual environment directories
-
 venv/
 env/
 .venv/
 .env/
 
 # Ignore Docker-related files
-
 Dockerfile
 docker-compose.yml
 
 # Ignore log files
-
 \*.log
 
 # Ignore temporary files
-
 _.tmp
 _.swp
 _.swo
 _.bak
 
 # Ignore OS-specific files
-
 .DS_Store
 Thumbs.db
 
 # Ignore build directories
-
 build/
 dist/
 \*.egg-info/
 
 # Ignore any other files or directories you want to exclude
-
 node_modules/
 coverage/
-
-!src/certs/Zscaler_Root_CA.pem

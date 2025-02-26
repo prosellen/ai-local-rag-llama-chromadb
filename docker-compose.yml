@@ -32,27 +32,32 @@ services:
     #           count: all
     #           capabilities: [gpu]
 
-  # # Custom Python Backend
-  # backend:
-  #   build: ./src/backend/
-  #   image: prosellen/rag-coop-backend
-  #   ports:
-  #     - "3001:3001"
-  #   # args:
-  #   #   - BUILD_ENV=${BUILD_ENV:-development}
-  #   #   - CERT_FILE=${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
-  #   environment:
-  #     BUILD_ENV: ${BUILD_ENV:-development}
-  #     CERT_FILE: ${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
-  #   # command: ["python", "main.py"]
-  #   develop:
-  #     watch:
-  #       - action: sync # Sync file changes without rebuilding
-  #         path: . # Watch all files in the project directory
-  #         target: /app # Sync changes into the container
-  #   networks:
-  #     - local-rag-coop-frontend
-  #     - local-rag-coop-backend
+  # Custom Python Backend
+  backend:
+    build: ./src/backend/
+    image: prosellen/rag-coop-backend
+    container_name: backend
+    ports:
+      - "3001:3001"
+    # args:
+    #   - BUILD_ENV=${BUILD_ENV:-development}
+    #   - CERT_FILE=${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
+    environment:
+      BUILD_ENV: ${BUILD_ENV:-development}
+      CERT_FILE: ${CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
+    # command: ["python", "main.py"]
+    develop:
+      watch:
+        - action: sync # Sync file changes without rebuilding
+          path: ./src/backend/ # Watch all files in the project directory
+          target: /app # Sync changes into the container
+        - action: rebuild # Rebuild the container when Dockerfile changes
+          path: ./src/backend/Dockerfile # Watch all files in the project directory
+        - action: rebuild # Rebuild the container when Dockerfile changes
+          path: ./src/backend/requirements.txt # Watch all files in the project directory
+    networks:
+      - local-rag-coop-frontend
+      - local-rag-coop-backend
 
   # Ollama API
   ollama:
@@ -74,23 +79,25 @@ services:
     #   - chromadb
     # - local-rag-coop-backend
 
-  # # ChromaDB database
-  # chromadb:
-  #   image: chromadb/chroma
-  #   networks:
-  #     - local-rag-coop-backend
+  # ChromaDB database
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "5432:8000"
+    networks:
+      - local-rag-coop-backend
 
   # Pull-Image - automatically downloads the latest model
-  ollama-models-pull:
-    container_name: ollama-models-pull
-    image: curlimages/curl:latest
-    command: >
-      http://ollama:11434/api/pull -d '{"name":"mistral"}'
-    depends_on:
-      ollama:
-        condition: service_healthy
-    networks:
-      - local-rag-coop-frontend
+  # ollama-models-pull:
+  #   container_name: ollama-models-pull
+  #   image: curlimages/curl:latest
+  #   command: >
+  #     http://ollama:11434/api/pull -d '{"name":"mistral"}'
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   networks:
+  #     - local-rag-coop-frontend
 
 volumes:
   ollama_data:
