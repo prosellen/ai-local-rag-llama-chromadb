@@ -3,6 +3,7 @@ import os
 import shutil
 import logging
 from pathlib import Path
+from typing import List, Dict, Any
 
 from docling.datamodel.document import DoclingDocument, DocItem
 from docling.chunking import HybridChunker, DocChunk, DocMeta
@@ -52,8 +53,6 @@ def create_document_list() -> list[str]:
         document_list.append(os.path.join(root, file))
   return document_list
 
-
-
 def convert_documents(document_list: list[str]) -> list[ConversionResult]:
   doc_converter = DocumentConverter()
   converted_documents = doc_converter.convert_all(document_list)
@@ -91,57 +90,98 @@ def chunk_documents(conversion_results: list[ConversionResult]) -> list[any]:
     for i, chunk in enumerate(chunk_iter):
       # chunk.metadata["id"] = f"{document.input.file.stem}:{chunk.metadata['page']}:{i}"
       document_chunks.append(chunk)
+
   return document_chunks
 
-def add_to_database(chunks: list[DocChunk]): 
-  chroma_client = chromadb.HttpClient(host='localhost', port=5432)
-
-  # Add or Update the documents.
-  collection = chroma_client.get_or_create_collection(name="vorwerk", embedding_function=embedding_functions.DefaultEmbeddingFunction())  # IDs are always included by default
-  existing_items = collection.get(include=[])
-  existing_ids = set(existing_items["ids"])
-  print(f"Number of existing documents in DB: {existing_ids}")
-
-  # Only add documents that don't exist in the DB.
-
-
-  if len(chunks):
-      print(f"👉 Adding new documents: {len(chunks)}")
-      new_chunk_ids = create_unique_chunk_id(chunks)
-      new_chunk_documents = [chunk.text for chunk in chunks]
-      new_chunk_metadatas = create_meta_data(chunks)
-      collection.add(documents=new_chunk_documents, metadatas=new_chunk_metadatas, ids=new_chunk_ids)
-      # print the first 100 characters of each new_chunk.page_content
-
-      print(f"👉 Added {len(chunks)} new documents")
-      # collection.persist()
-  else:
-      print("✅ No new documents to add")
-
-def create_meta_data(chunks: list[DocMeta]) -> DocMeta:
-  # loop over the chunks
-  # for each chunk, create a dictionary with the following keys:
-  # - origin: filename
-  # - uri: path to the file
-  # - binary_hash: hash of the binary file
-  # store the dictionary in a list
-  # return the list
-  meta_data_list = []
-  for chunk in chunks:
-    meta_data = {
-      "origin": chunk.meta.origin.filename,
-      "uri": chunk.meta.origin.uri or '',
-      "binary_hash": chunk.meta.origin.binary_hash
-    }
-    meta_data_list.append(meta_data)
-  return meta_data_list
-
-
-def create_unique_chunk_id(chunks:list[DocChunk]) -> str:
+def create_chunks_id(chunks: list[DocChunk]) -> str:
+  last_source = None
+  current_chunk_index = 0
   chunk_ids = []
-  for i, chunk in enumerate(chunks):
-    chunk_ids.append(f"{chunk.meta.origin.filename}:{i}")
+
+  for chunk in chunks:
+    source = f"{chunk.meta.origin.filename}:{chunk.meta.origin.binary_hash}"
+    current_source = f"{source}"
+
+    # If the page ID is the same as the last one, increment the index.
+    if current_source == last_source:
+        current_chunk_index += 1
+    else:
+        current_chunk_index = 0
+
+    # Calculate the chunk ID.
+    chunk_id = f"{source}:{current_chunk_index}"
+    last_source = current_source
+
+    # Add it to the page meta-data.
+    chunk_ids.append(chunk_id)
+
   return chunk_ids
+
+def create_chunks_metadata(chunks: list[DocChunk]) -> list[Dict[str, any]]:
+  chunks_metadata = []
+  for chunk in chunks:
+    metadata = create_chunk_metadata(chunk)
+    chunks_metadata.append(metadata)
+  return chunks_metadata
+
+def create_chunk_metadata(chunk: DocChunk) -> Dict[str, any]:
+  metadata = {
+      "headings": [],
+      "page_info": None,
+      "content_type": None,
+      "filename": None,
+      "mimetype": None,
+      "uri": None,
+      "binary_hash": None,
+  }
+  
+  if hasattr(chunk, 'meta'):
+      # Extract headings
+      if hasattr(chunk.meta, 'headings') and chunk.meta.headings:
+          metadata["headings"] = chunk.meta.headings
+      
+      # Extract page information and content type
+      if hasattr(chunk.meta, 'doc_items'):
+          for item in chunk.meta.doc_items:
+              if hasattr(item, 'label'):
+                  metadata["content_type"] = str(item.label)
+              
+              if hasattr(item, 'prov') and item.prov:
+                  for prov in item.prov:
+                      if hasattr(prov, 'page_no'):
+                          metadata["page_info"] = prov.page_no
+
+      if hasattr(chunk.meta.origin, 'filename'):
+          metadata["filename"] = chunk.meta.origin.filename
+
+      if hasattr(chunk.meta.origin, 'binary_hash'):
+          metadata["binary_hash"] = chunk.meta.origin.binary_hash
+      
+      if hasattr(chunk.meta.origin, 'mimetype'):
+          metadata["mimetype"] = chunk.meta.origin.mimetype
+
+      if hasattr(chunk.meta.origin, 'uri'):
+          metadata["uri"] = chunk.meta.origin.uri
+
+  return metadata
+
+def create_chunks_document(chunks: list[DocChunk]) -> list[str]:
+  chunks_document = []
+  for chunk in chunks:
+    # chunk_serialized = chunker.serialize(chunk=chunk)
+    chunk_serialized = chunk.text # FIXME: This is a temporary solution
+    chunks_document.append(chunk_serialized)
+
+  return chunks_document
+
+def add_to_database(chunks: list[DocChunk]):
+  # Add the chunks to the database
+  chunk_ids = create_chunks_id(chunks)
+  chunk_documents = create_chunks_document(chunks)
+  chunk_metadatas = create_chunks_metadata(chunks)
+
+  # Add the chunks to the database
+  print(f"Adding chunks to the database:")
 
 if __name__ == "__main__":
     main()
