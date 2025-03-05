@@ -1,5 +1,6 @@
 import argparse
 import os
+
 import shutil
 import logging
 from pathlib import Path
@@ -126,7 +127,7 @@ def create_chunks_metadata(chunks: list[DocChunk]) -> list[Dict[str, any]]:
 
 def create_chunk_metadata(chunk: DocChunk) -> Dict[str, any]:
   metadata = {
-      "headings": [],
+      "headings": "",
       "page_info": None,
       "content_type": None,
       "filename": None,
@@ -136,9 +137,9 @@ def create_chunk_metadata(chunk: DocChunk) -> Dict[str, any]:
   }
   
   if hasattr(chunk, 'meta'):
-      # Extract headings
+      # Extract headings - concat for ChromaDB
       if hasattr(chunk.meta, 'headings') and chunk.meta.headings:
-          metadata["headings"] = chunk.meta.headings
+        metadata["headings"] = f"Section: {" > ".join(chunk.meta.headings)}"
       
       # Extract page information and content type
       if hasattr(chunk.meta, 'doc_items'):
@@ -163,7 +164,13 @@ def create_chunk_metadata(chunk: DocChunk) -> Dict[str, any]:
       if hasattr(chunk.meta.origin, 'uri'):
           metadata["uri"] = chunk.meta.origin.uri
 
-  return metadata
+  # Filter out None values
+  filtered_metadata = {
+      key: value for key, value in metadata.items()
+      if value is not None
+  }
+
+  return filtered_metadata
 
 def create_chunks_document(chunks: list[DocChunk]) -> list[str]:
   chunks_document = []
@@ -176,12 +183,19 @@ def create_chunks_document(chunks: list[DocChunk]) -> list[str]:
 
 def add_to_database(chunks: list[DocChunk]):
   # Add the chunks to the database
-  chunk_ids = create_chunks_id(chunks)
-  chunk_documents = create_chunks_document(chunks)
-  chunk_metadatas = create_chunks_metadata(chunks)
+  new_chunks = chunks;
 
-  # Add the chunks to the database
-  print(f"Adding chunks to the database:")
+  chroma_client = chromadb.HttpClient(host='localhost', port=5432)
+  collection = chroma_client.get_or_create_collection(name="vorwerk")  # IDs are always included by default
+
+  print(f"👉 Adding new documents: {len(new_chunks)}")
+
+  new_chunk_ids = create_chunks_id(new_chunks)
+  new_chunk_documents = create_chunks_document(new_chunks)
+  new_chunk_metadatas = create_chunks_metadata(new_chunks)
+  collection.add(documents=new_chunk_documents, metadatas=new_chunk_metadatas, ids=new_chunk_ids)
+
+  print(f"👉 Added {len(new_chunks)} new documents")
 
 if __name__ == "__main__":
     main()
