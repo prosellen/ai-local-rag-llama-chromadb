@@ -23,7 +23,7 @@ from get_embedding_function import get_embedding_function
 import chromadb
 from pypdf import PdfReader
 
-CHROMA_PATCH = "chroma"
+CHROMA_PATH = "src/chromadb/local"
 DATA_PATH = "src/backend/resources/test/"
 OUT_PATH = "src/backend/resources/scratch"
 EMBED_MODEL_ID="sentence-transformers/all-MiniLM-L6-v2"
@@ -186,7 +186,7 @@ def add_to_database(chunks: list[DocChunk]):
   new_chunks = chunks;
 
   chroma_client = chromadb.HttpClient(host='localhost', port=5432)
-  collection = chroma_client.get_or_create_collection(name="vorwerk")  # IDs are always included by default
+  collection = chroma_client.get_or_create_collection(name="vorwerk", embedding_function=get_embedding_function())  # IDs are always included by default
 
   print(f"👉 Adding new documents: {len(new_chunks)}")
 
