@@ -16,6 +16,7 @@ from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 from transformers import AutoTokenizer
 
 from chromadb.utils import embedding_functions
+from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 
 from get_embedding_function import get_embedding_function
@@ -185,7 +186,8 @@ def add_to_database(chunks: list[DocChunk]):
   # Add the chunks to the database
   new_chunks = chunks;
 
-  chroma_client = chromadb.HttpClient(host='localhost', port=5432)
+  # chroma_client = chromadb.HttpClient(host='localhost', port=5432)
+  chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
   collection = chroma_client.get_or_create_collection(name="vorwerk", embedding_function=get_embedding_function())  # IDs are always included by default
 
   print(f"👉 Adding new documents: {len(new_chunks)}")
@@ -193,9 +195,11 @@ def add_to_database(chunks: list[DocChunk]):
   new_chunk_ids = create_chunks_id(new_chunks)
   new_chunk_documents = create_chunks_document(new_chunks)
   new_chunk_metadatas = create_chunks_metadata(new_chunks)
-  collection.add(documents=new_chunk_documents, metadatas=new_chunk_metadatas, ids=new_chunk_ids)
+  collection.upsert(documents=new_chunk_documents, ids=new_chunk_ids)
 
   print(f"👉 Added {len(new_chunks)} new documents")
+
+  print(collection.get(include=["documents", "metadatas"]))
 
 if __name__ == "__main__":
     main()

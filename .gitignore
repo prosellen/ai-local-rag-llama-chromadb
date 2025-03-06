@@ -40,3 +40,5 @@ docker.env
 # Resources for the "R" part of "RAG"
 # This is where I will put all my files ... and hope for the best. :3
 src/backend/resources
+
+src/chromadb/local
