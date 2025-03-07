@@ -25,7 +25,7 @@ import chromadb
 from pypdf import PdfReader
 
 CHROMA_PATH = "src/chromadb/local"
-DATA_PATH = "src/backend/resources/test/"
+DATA_PATH = "src/backend/resources/Vorwerk/"
 OUT_PATH = "src/backend/resources/scratch"
 EMBED_MODEL_ID="sentence-transformers/all-MiniLM-L6-v2"
 

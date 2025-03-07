@@ -42,3 +42,5 @@ docker.env
 src/backend/resources
 
 src/chromadb/local
+__azurite_db_table__.json
+AzuriteConfig

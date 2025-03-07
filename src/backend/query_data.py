@@ -37,9 +37,6 @@ def query_rag(query_text: str):
     chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
     collection = chroma_client.get_collection(name="vorwerk", embedding_function=get_embedding_function())
 
-
-    print(collection.peek())
-
     # Search the DB.
     results = collection.query(query_texts=query_text, n_results=5)
 
